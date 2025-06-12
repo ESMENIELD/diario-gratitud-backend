@@ -14,5 +14,5 @@ app.get('/', (req, res) => {
 app.listen(process.env.PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${process.env.PORT}`);
 });
-const entriesRoutes = require('./routes/entires');
+const entriesRoutes = require('./src/routes/entires');
 app.use('/api/entries', entriesRoutes);
