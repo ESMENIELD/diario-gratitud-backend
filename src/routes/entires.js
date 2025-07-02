@@ -7,7 +7,7 @@ router.use(verifyToken);
 
 // 🔹 Obtener todas las entradas del usuario autenticado
 router.get('/', (req, res) => {
-  const userId = req.user.uid;
+  const userId = req.uid;
 
   db.query(
     'SELECT * FROM entries WHERE user_id = ? ORDER BY updated_at DESC',
@@ -21,9 +21,14 @@ router.get('/', (req, res) => {
 
 // 🔹 Crear nueva entrada
 router.post('/', (req, res) => {
+  
   const { title, content, frequency_title, frequency_link } = req.body;
-  const userId = req.user.uid;
+  const userId = req.uid;
   const now = new Date();
+  
+  console.log('🔔 POST /api/entries recibido');
+  console.log('Body:', req.body);
+  console.log('UID:', req.user);
 
   db.query(
     `INSERT INTO entries (user_id, title, content, frequency_title, frequency_link, created_at, updated_at)
@@ -49,16 +54,17 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   const { id } = req.params;
   const { title, content, frequency_title, frequency_link } = req.body;
-  const userId = req.user.uid;
+  const userId = req.uid;
   const now = new Date();
-
-  // Verificamos que la entrada sea del usuario
+  
   db.query(
     'SELECT * FROM entries WHERE id = ? AND user_id = ?',
     [id, userId],
     (err, results) => {
       if (err) return res.status(500).json({ error: err });
       if (results.length === 0) return res.status(403).json({ error: 'Acceso denegado' });
+
+      const createdAt = results[0].created_at; // mantener created_at original
 
       db.query(
         `UPDATE entries
@@ -67,7 +73,18 @@ router.put('/:id', (req, res) => {
         [title, content, frequency_title, frequency_link, now, id],
         (err) => {
           if (err) return res.status(500).json({ error: err });
-          res.json({ message: 'Entrada actualizada', updated_at: now });
+
+          // Devuelve la entrada COMPLETA actualizada
+          res.json({
+            id: parseInt(id),
+            user_id: userId,
+            title,
+            content,
+            frequency_title,
+            frequency_link,
+            created_at: createdAt,
+            updated_at: now
+          });
         }
       );
     }
@@ -77,7 +94,7 @@ router.put('/:id', (req, res) => {
 // 🔹 Eliminar entrada (solo si pertenece al usuario)
 router.delete('/:id', (req, res) => {
   const { id } = req.params;
-  const userId = req.user.uid;
+  const userId = req.uid;
 
   db.query(
     'DELETE FROM entries WHERE id = ? AND user_id = ?',
