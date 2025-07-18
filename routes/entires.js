@@ -12,6 +12,7 @@ router.get('/', (req, res) => {
 
 // Crear nueva entrada
 router.post('/', (req, res) => {
+   console.log("POST /entries body:", req.body)
   const { title, content, frequency_title, frequency_link } = req.body;
   const now = new Date();
   db.query(
