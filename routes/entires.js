@@ -19,7 +19,10 @@ router.post('/', (req, res) => {
     'INSERT INTO entries (title, content, frequency_title, frequency_link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
     [title, content, frequency_title, frequency_link, now, now],
     (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("❌ Error al insertar en la DB:", err);
+  return res.status(500).json({ error: err.message });
+}
       res.json({ id: result.insertId, title, content, frequency_title, frequency_link, created_at: now, updated_at: now });
     }
   );
