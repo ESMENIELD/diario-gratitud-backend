@@ -16,4 +16,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
 const entriesRoutes = require('./routes/entires');
+const usersRoutes= require("./routes/users");
 app.use('/api/entries', entriesRoutes);
+app.use("/api/users", usersRoutes)
