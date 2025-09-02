@@ -1,55 +1,64 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const verifyToken = require('../middlewares/firebaseAuth');
 
-// Obtener todos los usuarios
-router.get('/', (req, res) => {
-  db.query('SELECT * FROM users', (err, results) => {
-    if (err) return res.status(500).json({ error: err });
-    res.json(results);
-  });
-});
-
-// Crear nuevo usuario
-router.post('/', (req, res) => {
-  const { id, email } = req.body;
-  if (!id || !email) {
-    return res.status(400).json({ error: 'Faltan campos: id y email son obligatorios' });
+// Obtener todos los usuarios (protegido)
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const users = await db.query('SELECT * FROM users');
+    res.json(users.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error obteniendo usuarios' });
   }
-
-  db.query(
-    'INSERT INTO users (id, email) VALUES (?, ?)',
-    [id, email],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err });
-      res.json({ message: 'Usuario creado', id, email });
-    }
-  );
 });
 
-// Editar solo el email de un usuario
-router.put('/:id', (req, res) => {
+// Crear usuario (protegido)
+router.post('/', verifyToken, async (req, res) => {
+  const { email } = req.body;
+  const id = req.user.uid; // uid de Firebase
+
+  try {
+    const result = await db.query(
+      'INSERT INTO users (id, email) VALUES ($1, $2) RETURNING *',
+      [id, email]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error creando usuario' });
+  }
+});
+
+// Editar email de usuario (protegido)
+router.put('/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   const { email } = req.body;
 
-  db.query(
-    'UPDATE users SET email = ? WHERE id = ?',
-    [email, id],
-    (err) => {
-      if (err) return res.status(500).json({ error: err });
-      res.json({ message: 'Usuario actualizado', id, email });
-    }
-  );
+  try {
+    const result = await db.query(
+      'UPDATE users SET email = $1 WHERE id = $2 RETURNING *',
+      [email, id]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error actualizando usuario' });
+  }
 });
 
-// Eliminar usuario
-router.delete('/:id', (req, res) => {
+// Eliminar usuario (protegido)
+router.delete('/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
 
-  db.query('DELETE FROM users WHERE id = ?', [id], (err) => {
-    if (err) return res.status(500).json({ error: err });
-    res.json({ message: 'Usuario eliminado', id });
-  });
+  try {
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
+    res.json({ message: 'Usuario eliminado' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error eliminando usuario' });
+  }
 });
 
 module.exports = router;
