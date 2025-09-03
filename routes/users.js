@@ -6,8 +6,8 @@ const verifyToken = require('../middlewares/firebaseAuth');
 // Obtener todos los usuarios (protegido)
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const users = await db.query('SELECT * FROM users');
-    res.json(users.rows);
+    const [users] = await db.query('SELECT * FROM users');
+    res.json(users);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error obteniendo usuarios' });
@@ -20,11 +20,12 @@ router.post('/', verifyToken, async (req, res) => {
   const id = req.user.uid; // uid de Firebase
 
   try {
-    const result = await db.query(
-      'INSERT INTO users (id, email) VALUES ($1, $2) RETURNING *',
+    await db.query(
+      'INSERT INTO users (id, email) VALUES (?, ?)',
       [id, email]
     );
-    res.json(result.rows[0]);
+    const [newUser] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    res.json(newUser[0]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error creando usuario' });
@@ -37,11 +38,12 @@ router.put('/:id', verifyToken, async (req, res) => {
   const { email } = req.body;
 
   try {
-    const result = await db.query(
-      'UPDATE users SET email = $1 WHERE id = $2 RETURNING *',
+    await db.query(
+      'UPDATE users SET email = ? WHERE id = ?',
       [email, id]
     );
-    res.json(result.rows[0]);
+    const [updatedUser] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    res.json(updatedUser[0]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error actualizando usuario' });
@@ -53,7 +55,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
-    await db.query('DELETE FROM users WHERE id = $1', [id]);
+    await db.query('DELETE FROM users WHERE id = ?', [id]);
     res.json({ message: 'Usuario eliminado' });
   } catch (error) {
     console.error(error);
